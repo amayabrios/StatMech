@@ -1,106 +1,91 @@
-import numpy as np
+from numpy import *
 from matplotlib import pyplot as plt
-#(b - a) * random_sample() + a
-
-'''def rand_h(minh, maxh):
-    # 
-    diff = maxh - minh
-    selected = np.random.random_sample(minh, maxh, 1)
-    height = minh + diff*selected
-    return height'''
 
 
-def partition(h, k=1, g=1, m=1, T=1):
-    Z = np.exp((m * g * h) / (k * T))
-    return Z
+class MC:
+    def __init__(self, k=1, g=1, m=1, T=1):
+        '''
+        :param k: constant
+        :param g: acceleration due to gravity
+        :param m: mass
+        :param T: temperature
+        '''
+        self.k = k
+        self.g = g
+        self.m = m
+        self.T = T
+
+    def partition(self, h):
+        Z = exp((self.m * self.g * h) / (self.k * self.T))
+        return Z
+
+    def prop_h(self, current_height: float, scale: float):
+        '''
+        draw a jump from some dist
+        uniform dist centered on zero and from -scale/2 to +scale/2
+        '''
+        jump = scale * (random.rand() - 0.5)
+        return current_height + jump
+
+    def test_move(self, previous_height, proposed_height, delta_energy) -> bool:
+        '''
+        :param previous_height:
+        :param proposed_height:
+        :param delta_energy:
+
+        :return:
+            True if move accepted, False if move denied
+        '''
+        height_status = proposed_height > 0
+        height_below = proposed_height < previous_height
+        probability = exp(-delta_energy / self.T)
+        return height_status and (height_below or (probability > random.rand()))
+
+    def energy(self, height: float) -> float:
+        return self.m * self.g * height
+
+    def sim(self, num_steps: int) -> list[float]:
+        '''
+        A Monte Carlo Simulation of a single particle of mass m in a gravitational well
+        with acceleration g at temperature T. Start at some initial height and propose a
+        new height from some random distance. If the energy associated with the
+        new height is smaller, then we move to that height. If the energy is larger, then
+        we move to that height with prob e^-deltaE/T. No heights are accepted that bring
+        the system below zero.
+
+        :param num_steps: number of Monte Carlo steps to execute
+        :return: heights: list of height at every MC step
+        '''
+        heights = [0]   # set the initial height
+        scale = self.T / (self.m * self.g)   # compute the scale for proposed jumps
+        for i in range(num_steps):
+            h = self.prop_h(heights[-1], scale)
+            prop_E = self.energy(h)
+            prev_E = self.energy(heights[-1])
+            delta_energy = prop_E - prev_E
+            if self.test_move(heights[-1], h, delta_energy):
+                heights.append(h)
+            else:
+                heights.append(heights[-1])
+        return heights
+
+    def display(self, heights: list[float]):
+        # heights = sim(10, T = 10, mass = 100, g = 1e-10)
+        # varying temperature and mass, smaller g going farther out into space
+        plt.plot(heights)
+        plt.figure(2)
+        plt.hist(heights)
+        # plt.hist(heights, density = 'true'), showing prob density
+        plt.yscale('log')
+        x = arrange(10)
+        h0 = 1
+        plt.plot(h.exp(-h/h0))
 
 
-heights = []
+def main():
+    mc = MC()
+    mc.display(mc.sim(10))
 
 
-def monte_carlo(samples=100):
-    '''lower = 0
-    upper = 1'''
-
-    density = 0
-    for s in range(samples):
-        h = round(np.random.random_sample(), 1)
-        heights.append(h)
-        density += partition(h)
-    return heights
-
-
-plt.hist(heights, 10)
-
-
-def proph(current_Height, scale):
-    # draw a jump from some dist
-    # uniform dist centered on zero and from -scale/2 to +scale/2
-    jump = scale * (np.random.rand() - 0.5)
-    return current_Height + jump
-
-
-def accerpt_MCmove(previous_Height, proposed_Height, delta_Energy, T):
-    '''
-    Returns true if we accept the move, fale if we don't
-    '''
-    height_greaterThanZero = proposed_Height > 0
-    height_below = proposed_Height < previous_Height
-    acceptProbability = np.exp(-deltaEnergy / T)
-
-    accept = height_greaterThanZero and (heightBelow or (acceptProbability > np.random.rand()))
-    return accept
-
-
-def calc_Energy(height, mass, g):
-    return mass * g * height
-
-
-def monteCarloSim(numsteps, mass=1, g=1, T=1):
-    '''
-    Run a monte carlo sim of a single particle of mass in a
-    gravitational well with acceleration g at temperature T.
-    We will start at some initial height and propose a new height
-    from some random dist.
-    If the energy associated with the new height is smaller, then
-    we move to that height. If the energy is larger, then we move
-    to that height with prob e^-deltaE/T
-    No heights are accepted that bring the system below zero.
-
-    args:
-        numsteps(int): the number of monte carlo steps to execute
-        mass(float): the mass
-        g(float): acceleration due to gravity
-        T(float): temperature
-
-    return:
-        heights(list of floats): the height at every MC step
-    '''
-
-    # set the initial height
-    heights = [0]
-    # compute the scale for proposed jumps drawn from a random dist.
-    scale = T / (mass * g)
-    # start monte carlo loop
-    for i in range(numsteps):
-        proposed_newHeight = propose_Height(heights[-1], scale)
-        proposed_Energy = calc_Energy(proposed_newHeight, mass, g)
-        previous_Energy = calc_Energy(heights[-1], mass, g)
-        delta_Energy = proposed_Energy - previous_Energy
-        if accerpt_MCmove(previous_Height propose_Height, delta_Energy, T):
-            heights.append(proposed_newHeight)
-        else:
-            heights.append(heights[-1])
-
-
-heights = monteCarloSim(10)
-# heights = monteCarloSim(10, T = 10, mass = 100, g = 1e-10)
-# varying temperature and mass, smaller g going farther out into space
-plt.plot(heights)
-plt.figure(2)
-plt.hist(heights)
-#plt.hist(heights, density = 'true'), showing prob density
-plt.yscale('log')
-x = np.arrange(10)
-h0 = 1
-plt.plot(h.np.exp(-h/h0))
+if __name__ == "__main__":
+    main()
